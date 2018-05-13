@@ -21,24 +21,28 @@ NN_COMMON_OBJ+=$(addprefix $(OBJDIR), $(addsuffix .o,$(basename $(notdir $(NN_CO
 
 NN_TRAIN_DEPS = $(addprefix $(OBJDIR), $(addsuffix .d,$(basename $(notdir $(NN_COMMON_SRC) $(NN_TRAIN_SRC)))))
 
-include $(NN_TRAIN_OBJ:.o=.d)
-include $(NN_COMMON_OBJ:.o=.d)
-
 all: obj exec
 
-exec: bin nnfun-train 
+exec: bin train-prebuild nnfun-train 
+
+train-prebuild:$(NN_TRAIN_DEPS)
+
+$(OBJDIR)%.d:%.c
+	$(CC) -MT $(addsuffix .o,$(basename $@)) -MMD -MP -MF $@ $(COMMON) -c $<
 
 nnfun-train:$(NN_TRAIN_OBJ) $(NN_COMMON_OBJ)
 	$(CC) $(COMMON) $(CFLAGS) $^ -o $(BINDIR)/$@ 
 
 $(OBJDIR)%.o: %.c 
 	$(CC) $(COMMON) $(CFLAGS) -c $< -o $@
-	$(CC) -MT $(addsuffix .o,$(basename $@)) -MMD -MP -MF $(OBJDIR)$*.d $(COMMON) -c $<
 
 bin:
 	mkdir -p bin
 obj:
 	mkdir -p obj
+
+-include $(NN_TRAIN_OBJ:.o=.d)
+-include $(NN_COMMON_OBJ:.o=.d)
 
 #obj/%.o: src/nntrain/%.c
 #	@echo $@ $^ 
