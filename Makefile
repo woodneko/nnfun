@@ -28,7 +28,7 @@ exec: bin train-prebuild nnfun-train
 train-prebuild:$(NN_TRAIN_DEPS)
 
 $(OBJDIR)%.d:%.c
-	$(CC) -MT $(addsuffix .o,$(basename $@)) -MMD -MP -MF $@ $(COMMON) -c $<
+	$(CC) -MT $(addsuffix .o,$(basename $@)) -MM -MP -MF $@ $(COMMON) -c $<
 
 nnfun-train:$(NN_TRAIN_OBJ) $(NN_COMMON_OBJ)
 	$(CC) $(COMMON) $(CFLAGS) $^ -o $(BINDIR)/$@ 
@@ -41,19 +41,17 @@ bin:
 obj:
 	mkdir -p obj
 
--include $(NN_TRAIN_OBJ:.o=.d)
--include $(NN_COMMON_OBJ:.o=.d)
-
-#obj/%.o: src/nntrain/%.c
-#	@echo $@ $^ 
-
-test:
-	@echo objs: $(NN_TRAIN_OBJ) $(NN_COMMON_OBJ)
-	@echo srcs: $(NN_TRAIN_SRC)
-	@echo dep: $(wildcard $(OBJDIR)*.d)
-
 .PHONY: clean
 
 clean:
 	rm -rf $(BINDIR)/* $(OBJDIR)*
+
+test:
+	@echo objs: $(NN_TRAIN_OBJ) $(NN_COMMON_OBJ)
+	@echo srcs: $(NN_TRAIN_SRC)
+	@echo dep: $(NN_COMMON_OBJ:.o=.d)
+
+-include $(NN_TRAIN_OBJ:.o=.d)
+-include $(NN_COMMON_OBJ:.o=.d)
+
 
