@@ -55,6 +55,7 @@ tags
 cscope.*
 *.swp
 *.swo
-obj/
+obj/*
+!obj/
 bin/
 

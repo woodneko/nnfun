@@ -8,8 +8,10 @@
 #if (NN_MEMORY_TYPE == NN_MEMORY_DYNAMIC)
 #include <stdlib.h>
 
-static layer_t *layer = NULL; 
-static neural_node_t *nodes = NULL; 
+static layer_t layer_hd = {0}; 
+static layer_t *layer = NULL;
+static neural_node_t *nodes = NULL;
+static matrix_t *wmatrix = NULL;
 
 #else
 static layer_t layer_hd = {0}; 
@@ -176,6 +178,23 @@ int set_network_data(unsigned short layer_index, unsigned short nodes_index, uns
     return 0;
 }
 
+layer_t *get_layer(int index)
+{
+    int i;
+    layer_t *ltmp = layer_hd.node.next;
+
+    if ( index < 0 || index > NN_LAYER_TOTAL_NUM ) 
+    {
+        return NULL;
+    }
+
+    for(i = 0; i < index && ltmp != &layer_hd;; i++; ltmp = (layer_t *)ltmp->node.next)
+    {
+    }
+
+    return ltmp == &layer_hd?NULL:ltmp;
+}
+
 matrix_t *get_network_data(unsigned short layer_index, unsigned short nodes_index, unsigned short mindex, matrix_type_e type)
 {
     int i;
@@ -231,37 +250,60 @@ matrix_t *get_network_data(unsigned short layer_index, unsigned short nodes_inde
 void network_layer1_init()
 {
     int i,j;
+    neural_node_t *ntmp = NULL;
+    int som = NN_LAYER1_NODES_WEIGHT_START;
+    int ncnt = 0;
 
+    memset(&layer[NN_LAYER1], 0, sizeof(layer_t));
     list_init(&layer[NN_LAYER1].node);
     list_init(&layer[NN_LAYER1].nd_lh.node);
     list_insert_before(&layer_hd.node, &layer[NN_LAYER1].node);
     for(i = NN_LAYER1_NODES_START; i < NN_NODES_TOTAL_NUM; i++)
     {
+        memset(&nodes[i], 0, sizeof(neural_node_t));
         list_init(&nodes[i].node);
-        for(j = NN_LAYER1_NODES_WEIGHT_START; j < NN_LAYER1_ONE_NODES_WEIGHT_MATRIX_NUM; j++)
-        {
-            wmatrix[j].col = WEIGHT_MATRIX_COL;
-            wmatrix[j].row = WEIGHT_MATRIX_ROW;
-            wmatrix[j].data = &weight_data[i*j*WEIGHT_MATRIX_COL*WEIGHT_MATRIX_ROW];
-            nodes[i].w_num ++;
-            list_insert_before(&nodes[i].wm_hd.node, &wmatrix[j].node);
-        }
-
+        list_init(&nodes[i].wm_hd.node);
         list_insert_before(&layer[NN_LAYER1].nd_lh.node, &nodes[i].node);
         layer[NN_LAYER1].nodes_cnt ++;
     }
+
+    for(ntmp = (neural_node_t *)layer[NN_LAYER1].nd_lh.node.next; ntmp != (neural_node_t *)&layer[NN_LAYER1].nd_lh.node; ntmp = (neural_node_t *)ntmp->node.next, ncnt ++)
+    {
+        for(j = som; j < som+NN_LAYER1_ONE_NODES_WEIGHT_MATRIX_NUM; j++)
+        {
+            list_init(&wmatrix[j].node);
+            wmatrix[j].col = WEIGHT_MATRIX_COL;
+            wmatrix[j].row = WEIGHT_MATRIX_ROW;
+#if (NN_MEMORY_TYPE == NN_MEMORY_DYNAMIC)
+            wmatrix[j].data = malloc(sizeof(float)*WEIGHT_MATRIX_COL*WEIGHT_MATRIX_ROW);
+#else
+            wmatrix[j].data = &weight_data[ncnt*j*WEIGHT_MATRIX_COL*WEIGHT_MATRIX_ROW];
+#endif
+            ntmp->w_num ++;
+            list_insert_before(&ntmp->wm_hd.node, &wmatrix[j].node);
+        }
+
+        som = j;
+    }
+
+    printf("layer1 nodes: %d\r\n", layer[NN_LAYER1].nodes_cnt);
 }
 
 int init_global_network_data()
 {
+    list_init(&layer_hd.node);
+
 #if (NN_MEMORY_TYPE == NN_MEMORY_DYNAMIC)
+    layer = malloc(sizeof(layer_t)*NN_LAYER_TOTAL_NUM);
+    nodes = malloc(sizeof(neural_node_t)*NN_NODES_TOTAL_NUM);
+    wmatrix = malloc(sizeof(matrix_t)*NN_NODES_MATRIX_TOTAL_NUM);
 
 #else
-    list_init(&layer_hd.node);
     network_layer1_init();
-    test_setlayer();
-    print_network();
+    //test_setlayer();
+    //print_network();
 
 #endif
     return 0;
 }
+
